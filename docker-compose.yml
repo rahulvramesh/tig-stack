@@ -1,3 +1,10 @@
+x-logging: &x-logging
+  logging:
+    driver: 'json-file'
+    options:
+      max-file: '5'
+      max-size: '10m'
+
 version: "3"
 
 services:
@@ -16,10 +23,12 @@ services:
     image: telegraf:1.19
     volumes:
       - ${TELEGRAF_CFG_PATH}:/etc/telegraf/telegraf.conf:rw
+      - /var/run/docker.sock:/var/run/docker.sock
     env_file:
       - .env
     depends_on:
       - influxdb
+    user: 33333:33333
 
   grafana:
     image: grafana/grafana-oss:8.4.3
@@ -29,6 +38,18 @@ services:
       - influxdb
     ports:
       - ${GRAFANA_PORT}:3000
+
+  redis:
+    image: redis:6.2-alpine
+    <<: *x-logging
+    container_name: appwrite-redis
+    command: >
+      redis-server
+      --maxmemory            512mb
+      --maxmemory-policy     allkeys-lru
+      --maxmemory-samples    5
+    ports:
+      - "6379:6379"
 
 volumes:
   grafana-storage:
